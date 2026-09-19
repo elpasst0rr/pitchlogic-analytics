@@ -1,0 +1,250 @@
+# PitchLogic Analytics — Orquestador del pipeline de datos
+#
+# Coloca este archivo en: .github/workflows/pipeline.yml
+#
+# Tres jobs, cada uno atado a su propio cron dentro del mismo workflow:
+#   1. intraday-light  -> ingest_laliga.py --skip-players   (2-3x/día)
+#   2. full-daily       -> ingest_laliga.py completo          (1x/día, madrugada)
+#   3. weather           -> ingest_weather.py                  (cada hora)
+#
+# Los horarios de "schedule" están en UTC. Ajusta según tu preferencia horaria
+# (España: UTC+1 en invierno / UTC+2 en verano por el horario de verano).
+#
+# GitHub Secrets requeridos (Settings > Secrets and variables > Actions > Secrets):
+#   API_FOOTBALL_KEY
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   OPENWEATHERMAP_API_KEY
+#
+# GitHub Variable opcional (mismo menú, pestaña "Variables", no es secreta):
+#   LALIGA_SEASON   (ej. "2026" para la temporada 2026/2027). Si no la
+#                    defines, se usa el fallback del step "Resolve season".
+
+name: PitchLogic Analytics — Data Pipeline
+
+on:
+  # Permite lanzar cualquiera de los tres jobs a mano desde la pestaña Actions,
+  # muy útil para probar el pipeline sin esperar al cron.
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "¿Qué job quieres ejecutar manualmente?"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - intraday
+          - full
+          - weather
+          - odds
+          - predictions
+
+  schedule:
+    # Job 1 — Carga ligera intradía: 08:00 / 14:00 / 20:00 UTC
+    - cron: "0 8,14,20 * * *"
+    # Job 2 — Carga completa diaria: 04:00 UTC (hora de bajo tráfico)
+    - cron: "0 4 * * *"
+    # Job 3 — Clima: cada hora en punto, todo el día
+    - cron: "0 * * * *"
+    # Job 4 — Cuotas: cada 3 horas (a los :15, para no chocar con el resto)
+    - cron: "15 */3 * * *"
+    # Job 5 — Motor de predicciones: cada hora (a los :45, después de clima/cuotas)
+    - cron: "45 * * * *"
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ==========================================================================
+  # JOB 1 — Carga ligera intradía (partidos, resultados, calendario)
+  # ==========================================================================
+  intraday-light:
+    name: "Job 1 · Carga ligera intradía"
+    if: |
+      github.event.schedule == '0 8,14,20 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'intraday' || github.event.inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pitchlogic-intraday-light
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Resolve season
+        id: season
+        run: echo "value=${LALIGA_SEASON:-2026}" >> "$GITHUB_OUTPUT"
+        env:
+          LALIGA_SEASON: ${{ vars.LALIGA_SEASON }}
+
+      - name: Ejecutar ingest_laliga.py --skip-players
+        run: python ingest_laliga.py --season "${{ steps.season.outputs.value }}" --skip-players
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # ==========================================================================
+  # JOB 2 — Carga completa diaria (plantillas, bajas, player_importance_score)
+  # ==========================================================================
+  full-daily:
+    name: "Job 2 · Carga completa diaria"
+    if: |
+      github.event.schedule == '0 4 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'full' || github.event.inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: pitchlogic-full-daily
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Resolve season
+        id: season
+        run: echo "value=${LALIGA_SEASON:-2026}" >> "$GITHUB_OUTPUT"
+        env:
+          LALIGA_SEASON: ${{ vars.LALIGA_SEASON }}
+
+      - name: Ejecutar ingest_laliga.py (completo, con jugadores)
+        run: python ingest_laliga.py --season "${{ steps.season.outputs.value }}"
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # ==========================================================================
+  # JOB 3 — Clima (pronóstico a distancia / clima actual pre-partido)
+  # ==========================================================================
+  weather:
+    name: "Job 3 · Clima (Capa 4)"
+    if: |
+      github.event.schedule == '0 * * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'weather' || github.event.inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pitchlogic-weather
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar ingest_weather.py
+        run: python ingest_weather.py --hours-ahead 48
+        env:
+          OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # ==========================================================================
+  # JOB 4 — Cuotas de casas de apuestas (bookmaker_odds)
+  # ==========================================================================
+  odds:
+    name: "Job 4 · Cuotas (bookmaker_odds)"
+    if: |
+      github.event.schedule == '15 */3 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'odds' || github.event.inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pitchlogic-odds
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Resolve season
+        id: season
+        run: echo "value=${LALIGA_SEASON:-2026}" >> "$GITHUB_OUTPUT"
+        env:
+          LALIGA_SEASON: ${{ vars.LALIGA_SEASON }}
+
+      - name: Ejecutar ingest_odds.py
+        run: python ingest_odds.py --season "${{ steps.season.outputs.value }}" --hours-ahead 72
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # ==========================================================================
+  # JOB 5 — Motor de predicciones (las 4 capas -> predictions + value_alerts)
+  # ==========================================================================
+  predictions:
+    name: "Job 5 · Motor de predicciones (4 capas)"
+    if: |
+      github.event.schedule == '45 * * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.job == 'predictions' || github.event.inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: pitchlogic-predictions
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Resolve season
+        id: season
+        run: echo "value=${LALIGA_SEASON:-2026}" >> "$GITHUB_OUTPUT"
+        env:
+          LALIGA_SEASON: ${{ vars.LALIGA_SEASON }}
+
+      - name: Ejecutar calculate_predictions.py
+        run: python calculate_predictions.py --season "${{ steps.season.outputs.value }}" --hours-ahead 72 --run-type scheduled_intraday
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

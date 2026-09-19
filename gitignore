@@ -1,0 +1,41 @@
+# ---- Entorno y secretos ----
+.env
+.env.*
+!.env.example
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Herramientas de testing / cobertura / cache ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Sistema operativo / editores ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ---- Supabase CLI (si se usa localmente) ----
+.supabase/
+supabase/.temp/

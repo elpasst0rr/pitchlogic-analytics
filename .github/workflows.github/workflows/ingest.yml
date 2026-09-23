@@ -13,13 +13,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '20'
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: |
+          pip install -r requirements.txt || pip install requests supabase
 
       - name: Run Ingestion Script
         env:
@@ -28,4 +29,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/ingest.ts || node scripts/ingest.js || echo "Script completado"
+          python ingest_laliga.py

@@ -2,66 +2,66 @@ import React from 'react';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <main style={{ minHeight: '100vh', backgroundColor: '#020617', color: '#f8fafc', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
         
         {/* Cabecera */}
-        <header className="border-b border-slate-800 pb-6 flex justify-between items-center">
+        <header style={{ borderBottom: '1px solid #1e293b', paddingBottom: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-400">
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#34d399', margin: 0 }}>
               PitchLogic Analytics
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.25rem', margin: 0 }}>
               Plataforma de análisis predictivo y rendimiento deportivo
             </p>
           </div>
-          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold">
+          <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>
             Sistema En Línea 🟢
           </span>
         </header>
 
         {/* Panel del Radar de Valor */}
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-slate-100">
+        <section style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#f8fafc', margin: 0 }}>
               Radar de Valor de la Plantilla
             </h2>
-            <span className="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded">
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', backgroundColor: '#1e293b', padding: '0.25rem 0.625rem', borderRadius: '0.25rem' }}>
               Métricas Algorítmicas
             </span>
           </div>
 
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Métrica 1 */}
             <div>
-              <div className="flex justify-between text-sm font-medium mb-1">
-                <span className="text-slate-300">Rendimiento Técnico</span>
-                <span className="text-emerald-400 font-bold">88 / 100</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+                <span style={{ color: '#cbd5e1' }}>Rendimiento Técnico</span>
+                <span style={{ color: '#34d399', fontWeight: 'bold' }}>88 / 100</span>
               </div>
-              <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full w-[88%]" />
+              <div style={{ width: '100%', backgroundColor: '#1e293b', height: '0.75rem', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: '#10b981', height: '100%', width: '88%', borderRadius: '9999px' }} />
               </div>
             </div>
 
             {/* Métrica 2 */}
             <div>
-              <div className="flex justify-between text-sm font-medium mb-1">
-                <span className="text-slate-300">Potencial de Mercado</span>
-                <span className="text-amber-400 font-bold">74 / 100</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+                <span style={{ color: '#cbd5e1' }}>Potencial de Mercado</span>
+                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>74 / 100</span>
               </div>
-              <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                <div className="bg-amber-500 h-full rounded-full w-[74%]" />
+              <div style={{ width: '100%', backgroundColor: '#1e293b', height: '0.75rem', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: '#f59e0b', height: '100%', width: '74%', borderRadius: '9999px' }} />
               </div>
             </div>
 
             {/* Métrica 3 */}
             <div>
-              <div className="flex justify-between text-sm font-medium mb-1">
-                <span className="text-slate-300">Riesgo de Lesión</span>
-                <span className="text-rose-400 font-bold">18 / 100 (Bajo)</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+                <span style={{ color: '#cbd5e1' }}>Riesgo de Lesión</span>
+                <span style={{ color: '#fb7185', fontWeight: 'bold' }}>18 / 100 (Bajo)</span>
               </div>
-              <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                <div className="bg-rose-500 h-full rounded-full w-[18%]" />
+              <div style={{ width: '100%', backgroundColor: '#1e293b', height: '0.75rem', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: '#f43f5e', height: '100%', width: '18%', borderRadius: '9999px' }} />
               </div>
             </div>
           </div>

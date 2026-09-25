@@ -1,42 +1,45 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const league = searchParams.get('league') || 'PD';
+  const apiKey = process.env.FOOTBALL_DATA_API_KEY;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-  // Validar si la URL empieza por http:// o https://
-  const isValidUrl = supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://');
-
-  if (!isValidUrl || !supabaseKey) {
-    return NextResponse.json({
-      status: 'warning',
-      league,
-      message: 'Base de datos no configurada o URL de Supabase inválida',
-      standings: [],
-      data: []
-    });
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'Configuración incompleta: Falta la variable FOOTBALL_DATA_API_KEY en Vercel.' },
+      { status: 500 }
+    );
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data, error } = await supabase
-      .from('match_stats_cache')
-      .select('*')
-      .limit(50);
+    const res = await fetch(`https://api.football-data.org/v4/competitions/${league}/standings`, {
+      headers: {
+        'X-Auth-Token': apiKey,
+      },
+      next: { revalidate: 3600 } // Caché de 1 hora
+    });
 
+    if (!res.ok) {
+      const errorText = await res.text();
+      return NextResponse.json(
+        { error: `Error en respuesta de Football-Data API (${res.status})`, details: errorText },
+        { status: res.status }
+      );
+    }
+
+    const data = await res.json();
     return NextResponse.json({
       status: 'success',
       league,
-      standings: data || [],
-      data: data || []
+      standings: data.standings || []
     });
   } catch (err: any) {
+    console.error('Error en API standings:', err.message);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: err.message },
+      { error: 'Error interno del servidor al consultar la clasificación', details: err.message },
       { status: 500 }
     );
   }
